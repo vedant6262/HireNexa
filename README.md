@@ -94,6 +94,10 @@ Import the repository into Vercel and set the project root directory to `fronten
 
 The Vite build and SPA rewrite are configured in `frontend/vercel.json`.
 
+### CV service
+
+Do not set `CV` as the Vercel project root. `CV/main.py` is a local webcam application, not a serverless web entrypoint, so Vercel reports `PYTHON_ENTRYPOINT_NOT_FOUND`. For the web app, the CV HTTP API is `backend/cv_service/server.py`; deploy it with the Docker service in the root `render.yaml` (built using `Dockerfile.cv`). The Render Blueprint also creates the API and database. After Render deploys, set Vercel's `VITE_API_URL` to the Render API origin ending in `/api`, and set Render's `FRONTEND_URL` to the Vercel site origin.
+
 ## Useful commands
 
 | Location | Command | Purpose |

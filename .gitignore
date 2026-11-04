@@ -8,6 +8,7 @@ backend/uploads/
 .DS_Store
 coverage/
 .next/
+.vercel/
 
 # Python
 .venv/
