@@ -3,6 +3,15 @@ const router = express.Router();
 const { requireAuth, requireRole } = require('../middleware/auth');
 const prisma = require('../config/prisma');
 
+router.get('/me', requireAuth, requireRole('RECRUITER', 'ADMIN'), async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { clerkId: req.userId }, include: { company: true } });
+    res.json(user.company);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get('/', async (req, res) => {
   try {
     const { search, industry } = req.query;

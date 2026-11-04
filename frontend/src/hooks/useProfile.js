@@ -2,10 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../utils/api'
 import toast from 'react-hot-toast'
 
-export function useProfile() {
+export function useProfile(options = {}) {
   return useQuery({
     queryKey: ['profile'],
     queryFn: () => api.get('/users/me').then(res => res.data),
+    ...options,
   })
 }
 
@@ -95,5 +96,29 @@ export function useUploadResume() {
       queryClient.invalidateQueries({ queryKey: ['profile'] })
       toast.success('Resume uploaded')
     },
+  })
+}
+
+export function useUpdateAvatar() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (image) => api.post('/users/avatar', { image }).then(res => res.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
+      toast.success('Profile photo updated')
+    },
+    onError: (error) => toast.error(error.message),
+  })
+}
+
+export function useDeleteAvatar() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.delete('/users/avatar').then(res => res.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
+      toast.success('Profile photo removed')
+    },
+    onError: (error) => toast.error(error.message),
   })
 }

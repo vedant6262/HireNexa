@@ -5,22 +5,29 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-const isLocalDev = import.meta.env.DEV || ['localhost', '127.0.0.1'].includes(window.location.hostname)
+const useLocalAuth = import.meta.env.DEV && import.meta.env.VITE_USE_LOCAL_AUTH === 'true'
+let authTokenGetter = null
+
+export function setAuthTokenGetter(getToken) {
+  authTokenGetter = getToken
+}
 
 api.interceptors.request.use(async (config) => {
+  if (useLocalAuth) {
+    config.headers['X-Dev-User-Id'] = window.location.pathname.startsWith('/recruiter')
+      ? 'recruiter_clerk_1'
+      : 'mock-user-1'
+    delete config.headers.Authorization
+    return config
+  }
+
   try {
-    const token = await window.Clerk?.session?.getToken()
+    const token = await authTokenGetter?.()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
-    } else if (isLocalDev) {
-      config.headers['X-Dev-User-Id'] = 'mock-user-1'
-      delete config.headers.Authorization
     }
   } catch (error) {
     console.error('Error getting auth token:', error)
-    if (isLocalDev) {
-      config.headers['X-Dev-User-Id'] = 'mock-user-1'
-    }
   }
   return config
 })

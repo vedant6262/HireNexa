@@ -317,6 +317,59 @@ function HiOutlineShieldCheckIcon(props) {
   return <HiOutlineExclamationTriangle {...props} />
 }
 
+function calculateAssessmentResult(questions, answers) {
+  let score = 0
+  const strengths = []
+  const skillGaps = []
+  const sectionStats = new Map()
+  const questionResults = []
+
+  questions.forEach((question) => {
+    const selectedAnswer = answers[question.id]
+    const correctAnswer = question.correctAnswer ?? (
+      typeof question.correctIndex === 'number' ? question.options?.[question.correctIndex] : undefined
+    )
+    const section = String(question.section || 'General')
+    const isCorrect = correctAnswer !== undefined && String(selectedAnswer) === String(correctAnswer)
+    const sectionStat = sectionStats.get(section) || { name: section, correct: 0, total: 0 }
+
+    if (isCorrect) score += Number(question.weight || 1)
+    sectionStat.total += 1
+    if (isCorrect) sectionStat.correct += 1
+    sectionStats.set(section, sectionStat)
+    questionResults.push({
+      id: question.id,
+      section,
+      question: question.question,
+      selectedAnswer: selectedAnswer ?? null,
+      correctAnswer: correctAnswer ?? null,
+      isCorrect,
+    })
+  })
+
+  const total = Math.max(questions.length, 1)
+  const percentage = Math.round((score / total) * 100)
+  strengths.push(percentage >= 75 ? 'Strong career readiness foundation' : 'Good potential with targeted upskilling')
+  strengths.push('Professional communication readiness')
+  skillGaps.push('Advanced system design', 'Cloud deployment and validation')
+
+  return {
+    score,
+    percentage,
+    total,
+    sections: Array.from(sectionStats.values()).map((section) => ({
+      ...section,
+      percentage: section.total ? Math.round((section.correct / section.total) * 100) : 0,
+    })),
+    questionResults,
+    strengths,
+    skillGaps,
+    recommendedRoles: ['Product Analyst', 'Software Engineer', 'Data Analyst', 'UX Research Assistant'],
+    summary: `You scored ${percentage}% in the industry-readiness assessment. This indicates ${percentage >= 80 ? 'excellent alignment' : 'good potential'} for career-focused internships and placement pathways.`,
+    recommendedIndustries: ['Technology', 'Consulting', 'Fintech', 'EdTech', 'Research'],
+  }
+}
+
 export default function SkillAssessment() {
   const navigate = useNavigate()
   const [selectedCareer, setSelectedCareer] = useState('software')
@@ -590,7 +643,8 @@ export default function SkillAssessment() {
 
     return {
       phoneDetected: Boolean(cvAnalysis?.phone?.detected),
-      multiplePeople: Boolean(cvAnalysis?.multiplePeople),
+      multiplePeople: Boolean(cvAnalysis?.multiplePeople)
+        || Math.max(Number(cvAnalysis?.personCount) || 0, Number(cvAnalysis?.faceCount) || 0) > 1,
       faceAbsent: Boolean(cvAnalysis?.faceAbsent),
       lookingAway: directions.some((direction) =>
         ['looking_left', 'looking_right', 'looking_up', 'looking_down'].includes(direction)),
@@ -640,12 +694,16 @@ export default function SkillAssessment() {
     lastFrame: cvAnalysis
       ? {
           faceCount: cvAnalysis.faceCount ?? 0,
-          personCount: cvAnalysis.personCount ?? 0,
+          personCount: Math.max(Number(cvAnalysis.personCount) || 0, Number(cvAnalysis.faceCount) || 0),
           phoneDetected: Boolean(cvAnalysis.phone?.detected),
         }
       : null,
     status: cvStatus,
   })
+
+  const detectedPersonCount = cvAnalysis
+    ? Math.max(Number(cvAnalysis.personCount) || 0, Number(cvAnalysis.faceCount) || 0)
+    : null
 
   const handleAnswer = (questionId, value) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }))
@@ -677,7 +735,7 @@ export default function SkillAssessment() {
 
   const finalizeAssessment = () => {
     setProctoringReport(buildProctoringReport())
-    setAssessmentResult(null)
+    setAssessmentResult(calculateAssessmentResult(questions, answers))
     setShowExitModal(false)
     setSubmitted(true)
   }
@@ -688,7 +746,12 @@ export default function SkillAssessment() {
 
   const confirmFinalSubmit = async () => {
     const proctoringSnapshot = buildProctoringReport()
+    const immediateResult = calculateAssessmentResult(questions, answers)
     setSubmittingAssessment(true)
+    setAssessmentResult(immediateResult)
+    setShowSubmitConfirm(false)
+    setProctoringReport(proctoringSnapshot)
+    setSubmitted(true)
 
     try {
       const { data } = await api.post('/portal/assessment/submit', {
@@ -698,13 +761,9 @@ export default function SkillAssessment() {
       })
       setAssessmentResult(data)
     } catch (error) {
-      setAssessmentResult(null)
-    } finally {
-      setSubmittingAssessment(false)
-      setShowSubmitConfirm(false)
-      setProctoringReport(proctoringSnapshot)
-      setSubmitted(true)
+      console.error('Assessment result sync failed:', error)
     }
+    setSubmittingAssessment(false)
   }
 
   const formatTime = (seconds) => {
@@ -805,11 +864,6 @@ export default function SkillAssessment() {
 
   const renderAssessmentOverview = () => (
     <div className="space-y-7">
-      {loadingQuestions && (
-        <div className="rounded-2xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm text-primary-700 dark:border-primary-500/20 dark:bg-primary-500/10 dark:text-primary-300">
-          Generating a fresh {selectedCareerMeta.label} assessment from Groq...
-        </div>
-      )}
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.3)] dark:border-slate-700 dark:bg-slate-800">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-2xl">
@@ -1069,7 +1123,7 @@ export default function SkillAssessment() {
           <div className="mx-auto h-14 w-14 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600 dark:border-primary-500/20 dark:border-t-primary-400" />
           <h2 className="mt-6 text-2xl font-bold text-slate-900 dark:text-white">Preparing your custom assessment</h2>
           <p className="mt-2 text-slate-600 dark:text-slate-300">
-            Loading fresh {selectedCareerMeta.label} questions from Groq AI.
+            Loading your assessment questions.
           </p>
         </div>
       </div>
@@ -1174,7 +1228,7 @@ export default function SkillAssessment() {
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-700 dark:bg-slate-900">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">People</p>
-                <p className="mt-1 font-semibold text-slate-900 dark:text-white">{cvAnalysis ? cvAnalysis.personCount : '—'}</p>
+                <p className="mt-1 font-semibold text-slate-900 dark:text-white">{detectedPersonCount ?? '—'}</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-700 dark:bg-slate-900">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Phone</p>

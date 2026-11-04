@@ -93,6 +93,40 @@ async function main() {
     }
   }
 
+  const demoCompany = await prisma.company.findUnique({ where: { slug: 'techcorp' } });
+  const demoJobs = [
+    { slug: 'hirenexa-demo-software-engineer-pune', title: 'Software Engineer', location: 'Pune', experienceLevel: 'Mid-Level', employmentType: 'Full-time', salaryMin: 800000, salaryMax: 1400000, skills: ['JavaScript', 'Node.js', 'PostgreSQL'] },
+    { slug: 'hirenexa-demo-data-analyst-mumbai', title: 'Data Analyst', location: 'Mumbai', experienceLevel: 'Entry-Level', employmentType: 'Full-time', salaryMin: 500000, salaryMax: 850000, skills: ['SQL', 'Excel', 'Python'] },
+    { slug: 'hirenexa-demo-frontend-developer-noida', title: 'Frontend Developer', location: 'Noida', experienceLevel: 'Mid-Level', employmentType: 'Full-time', salaryMin: 700000, salaryMax: 1200000, skills: ['React', 'TypeScript', 'CSS'] },
+    { slug: 'hirenexa-demo-hr-executive-gurugram', title: 'HR Executive', location: 'Gurugram', experienceLevel: 'Entry-Level', employmentType: 'Full-time', salaryMin: 400000, salaryMax: 650000, skills: ['Recruitment', 'Communication', 'HR Operations'] },
+    { slug: 'hirenexa-demo-digital-marketer-hyderabad', title: 'Digital Marketing Specialist', location: 'Hyderabad', experienceLevel: 'Mid-Level', employmentType: 'Full-time', salaryMin: 600000, salaryMax: 1000000, skills: ['SEO', 'Google Analytics', 'Content Marketing'] },
+    { slug: 'hirenexa-demo-product-designer-bengaluru', title: 'Product Designer', location: 'Bengaluru', experienceLevel: 'Mid-Level', employmentType: 'Full-time', salaryMin: 900000, salaryMax: 1600000, skills: ['Figma', 'Prototyping', 'Design Systems'] },
+    { slug: 'hirenexa-demo-backend-developer-pune', title: 'Backend Developer', location: 'Pune', experienceLevel: 'Senior', employmentType: 'Full-time', salaryMin: 1200000, salaryMax: 2000000, skills: ['Java', 'Spring Boot', 'AWS'] },
+    { slug: 'hirenexa-demo-sales-associate-mumbai', title: 'Sales Associate', location: 'Mumbai', experienceLevel: 'Entry-Level', employmentType: 'Full-time', salaryMin: 350000, salaryMax: 650000, skills: ['Sales', 'Negotiation', 'CRM'] },
+    { slug: 'hirenexa-demo-business-analyst-noida', title: 'Business Analyst', location: 'Noida', experienceLevel: 'Mid-Level', employmentType: 'Full-time', salaryMin: 800000, salaryMax: 1300000, skills: ['Business Analysis', 'SQL', 'Stakeholder Management'] },
+    { slug: 'hirenexa-demo-customer-success-gurugram', title: 'Customer Success Executive', location: 'Gurugram', experienceLevel: 'Entry-Level', employmentType: 'Full-time', salaryMin: 450000, salaryMax: 750000, skills: ['Customer Success', 'Communication', 'SaaS'] },
+    { slug: 'hirenexa-demo-qa-engineer-hyderabad', title: 'QA Engineer', location: 'Hyderabad', experienceLevel: 'Mid-Level', employmentType: 'Full-time', salaryMin: 700000, salaryMax: 1200000, skills: ['Test Automation', 'Playwright', 'API Testing'] },
+    { slug: 'hirenexa-demo-ux-designer-bengaluru', title: 'UX Designer', location: 'Bengaluru', experienceLevel: 'Mid-Level', employmentType: 'Full-time', salaryMin: 850000, salaryMax: 1500000, skills: ['UX Research', 'Figma', 'Wireframing'] },
+  ];
+
+  for (const job of demoJobs) {
+    await prisma.job.upsert({
+      where: { slug: job.slug },
+      update: {},
+      create: {
+        ...job,
+        description: `Join ${demoCompany.name} as a ${job.title} in ${job.location}. Work with a collaborative team on products used by customers across India.`,
+        requirements: `Relevant experience for a ${job.experienceLevel.toLowerCase()} role. Strong ${job.skills.slice(0, 2).join(' and ')} skills and clear communication.`,
+        responsibilities: `Deliver high-quality ${job.title.toLowerCase()} work, collaborate with your team, and contribute to shared project goals.`,
+        benefits: 'Health insurance, learning budget, and flexible work options.',
+        salaryCurrency: 'INR',
+        workMode: 'Hybrid',
+        status: 'ACTIVE',
+        companyId: demoCompany.id,
+      },
+    });
+  }
+
   const interviewCompanies = [
     'Amazon', 'Google', 'Microsoft', 'Apple', 'Meta', 'Infosys', 'TCS', 'Wipro',
     'Accenture', 'Deloitte', 'Cognizant', 'Capgemini', 'JPMorgan Chase', 'Goldman Sachs',

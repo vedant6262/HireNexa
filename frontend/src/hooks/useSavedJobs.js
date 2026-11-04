@@ -2,10 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../utils/api'
 import toast from 'react-hot-toast'
 
-export function useSavedJobs() {
+export function useSavedJobs(options = {}) {
   return useQuery({
     queryKey: ['savedJobs'],
     queryFn: () => api.get('/saved-jobs').then(res => res.data),
+    ...options,
   })
 }
 

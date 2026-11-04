@@ -4,6 +4,7 @@ import { HiOutlineMapPin, HiOutlineCurrencyDollar, HiOutlineClock, HiOutlineBook
 import { PLACEHOLDER_LOGO } from '../../utils/constants'
 
 export default function JobCard({ job, onSave, isSaved, index = 0 }) {
+  const detailsPath = job.detailsPath || `/jobs/${job.id}`
   const timeAgo = (date) => {
     const diff = Date.now() - new Date(date).getTime()
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
@@ -30,23 +31,18 @@ export default function JobCard({ job, onSave, isSaved, index = 0 }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <Link to={`/jobs/${job.id}`} className="text-lg font-semibold text-slate-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+              <Link to={detailsPath} className="text-lg font-semibold text-slate-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
                 {job.title}
               </Link>
               <Link to={`/companies/${job.companyId}`} className="block text-sm text-slate-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors mt-0.5">
                 {job.companyName}
               </Link>
             </div>
-            <button
-              onClick={() => onSave?.(job.id)}
-              className="btn-ghost p-2 shrink-0"
-            >
-              {isSaved ? (
-                <HiOutlineBookmarkSlash className="w-5 h-5 text-primary-600" />
-              ) : (
-                <HiOutlineBookmark className="w-5 h-5 text-slate-400" />
-              )}
-            </button>
+            {onSave && (
+              <button onClick={() => onSave(job.id)} className="btn-ghost p-2 shrink-0">
+                {isSaved ? <HiOutlineBookmarkSlash className="w-5 h-5 text-primary-600" /> : <HiOutlineBookmark className="w-5 h-5 text-slate-400" />}
+              </button>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-3 mt-3">
@@ -105,13 +101,13 @@ export default function JobCard({ job, onSave, isSaved, index = 0 }) {
 
           <div className="flex items-center gap-3 mt-4">
             <Link
-              to={`/jobs/${job.id}`}
+              to={detailsPath}
               className="btn-primary px-5 py-2 text-xs"
             >
               Apply Now
             </Link>
             <Link
-              to={`/jobs/${job.id}`}
+              to={detailsPath}
               className="btn-ghost px-4 py-2 text-xs"
             >
               View Details

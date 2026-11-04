@@ -29,8 +29,8 @@ export default function DashboardLayout({ role }) {
   const candidateLinks = [
     { to: '/dashboard', icon: HiOutlineHome, label: 'Dashboard' },
     { to: '/skill-assessment', icon: HiOutlineSparkles, label: 'Skill Assessment' },
-    { to: '/dashboard/jobs', icon: HiOutlineMagnifyingGlass, label: 'Live Jobs' },
-    { to: '/internships', icon: HiOutlineBriefcase, label: 'Internships & Jobs' },
+    { to: '/dashboard/live-jobs', icon: HiOutlineMagnifyingGlass, label: 'Live Jobs' },
+    { to: '/dashboard/hirenexa-jobs', icon: HiOutlineBriefcase, label: 'HireNexa Jobs' },
     { to: '/dashboard/applications', icon: HiOutlineDocumentText, label: 'My Applications' },
     { to: '/dashboard/saved-jobs', icon: HiOutlineHeart, label: 'Saved Jobs' },
     { to: '/dashboard/profile', icon: HiOutlineUser, label: 'Profile' },
@@ -70,7 +70,7 @@ export default function DashboardLayout({ role }) {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
                 <HiOutlineBriefcase className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-lg gradient-text">JobPortal</span>
+              <span className="font-bold text-lg gradient-text">HireNexa Jobs</span>
             </Link>
             <nav className="space-y-1 flex-1">
               {links.map(link => {

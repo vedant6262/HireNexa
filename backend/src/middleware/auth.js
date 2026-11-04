@@ -1,4 +1,4 @@
-const { createClerkClient } = require('@clerk/backend');
+const { createClerkClient, verifyToken } = require('@clerk/backend');
 
 const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
@@ -22,7 +22,7 @@ const requireAuth = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-    const payload = await clerkClient.verifyToken(token);
+    const payload = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY });
     req.userId = payload.sub;
     next();
   } catch (error) {
@@ -35,7 +35,7 @@ const optionalAuth = async (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
-      const payload = await clerkClient.verifyToken(token);
+      const payload = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY });
       req.userId = payload.sub;
     }
   } catch (error) {
@@ -47,8 +47,15 @@ const optionalAuth = async (req, res, next) => {
 const requireRole = (...roles) => {
   return async (req, res, next) => {
     try {
+      const devUserId = req.headers['x-dev-user-id'] || req.headers['x-user-id'];
+      if (allowLocalDevAuth() && devUserId) {
+        const localUser = await require('../config/prisma').user.findUnique({ where: { clerkId: req.userId }, select: { role: true } });
+        if (localUser && roles.includes(localUser.role)) return next();
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
       const user = await clerkClient.users.getUser(req.userId);
-      const role = user.publicMetadata?.role || 'CANDIDATE';
+      const dbUser = await require('../config/prisma').user.findUnique({ where: { clerkId: req.userId }, select: { role: true } });
+      const role = String(dbUser?.role || user.publicMetadata?.role || '').toUpperCase();
       
       if (!roles.includes(role)) {
         return res.status(403).json({ error: 'Insufficient permissions' });

@@ -28,7 +28,7 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: { error: 'Too many requests, please try again later.' },
-  skip: (req) => req.originalUrl.startsWith('/api/proctoring'),
+  skip: (req) => process.env.NODE_ENV !== 'production' || req.originalUrl.startsWith('/api/proctoring'),
 });
 
 app.use(helmet());

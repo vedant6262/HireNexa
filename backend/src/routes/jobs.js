@@ -81,6 +81,20 @@ router.get('/external', async (req, res) => {
   }
 });
 
+router.get('/mine', requireAuth, requireRole('RECRUITER', 'ADMIN'), async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { clerkId: req.userId }, include: { company: true } });
+    const jobs = await prisma.job.findMany({
+      where: user.role === 'ADMIN' ? {} : { companyId: user.company?.id || '__none__' },
+      include: { company: { select: { id: true, name: true, logo: true } }, _count: { select: { applications: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ jobs });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const job = await prisma.job.findUnique({

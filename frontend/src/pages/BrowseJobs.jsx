@@ -5,7 +5,9 @@ import { HiOutlineMagnifyingGlass, HiOutlineAdjustmentsHorizontal, HiOutlineFunn
 import JobCard from '../components/ui/JobCard'
 import { JobCardSkeleton } from '../components/ui/Skeleton'
 import { JOB_TYPES, EXPERIENCE_LEVELS, WORK_MODES, SALARY_RANGES } from '../utils/constants'
-import { useExternalJobs } from '../hooks/useJobs'
+import { useExternalJobs, useInternshipOpportunities, useJobs } from '../hooks/useJobs'
+import { useSavedJobs, useToggleSaveJob } from '../hooks/useSavedJobs'
+import { useAuth } from '../context/AuthProvider'
 
 const mapArbeitnowJob = (job) => ({
   id: job.slug,
@@ -25,7 +27,25 @@ const mapArbeitnowJob = (job) => ({
   description: job.description,
 })
 
-export default function BrowseJobs() {
+const mapInternship = (opportunity) => ({
+  id: opportunity.id,
+  title: opportunity.title,
+  companyName: opportunity.company,
+  companyLogo: null,
+  companyId: opportunity.id,
+  location: opportunity.location,
+  salary: opportunity.stipend,
+  employmentType: opportunity.type,
+  experience: '',
+  workMode: opportunity.mode,
+  skills: opportunity.skills || [],
+  createdAt: opportunity.deadline || new Date().toISOString(),
+  description: opportunity.description,
+  detailsPath: '/dashboard/jobs',
+})
+
+export default function BrowseJobs({ source = 'all' }) {
+  const { isSignedIn } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const [query, setQuery] = useState(searchParams.get('q') || '')
   const [location, setLocation] = useState(searchParams.get('location') || '')
@@ -58,8 +78,35 @@ export default function BrowseJobs() {
     return p
   }, [debouncedQuery, debouncedLocation])
 
-  const { data, isLoading, isError, error } = useExternalJobs(apiParams)
-  const allJobs = (data?.data || []).map(mapArbeitnowJob)
+  const { data, isLoading, isError, error } = useExternalJobs(apiParams, { enabled: source !== 'hirenexa' })
+  const { data: employerJobsData, isLoading: employerJobsLoading } = useJobs({ search: debouncedQuery, location: debouncedLocation, limit: 50 }, { enabled: source !== 'live' })
+  const { data: internshipData = [], isLoading: internshipsLoading } = useInternshipOpportunities({ enabled: source === 'all' })
+  const { data: savedJobs = [] } = useSavedJobs({ enabled: Boolean(isSignedIn) })
+  const toggleSave = useToggleSaveJob()
+  const savedIds = new Set(savedJobs.map((savedJob) => savedJob.jobId || savedJob.job?.id))
+  const allJobs = [
+    ...(source !== 'live' ? employerJobsData?.jobs || [] : []).map(job => ({
+      id: job.id,
+      title: job.title,
+      companyName: job.company?.name || 'Company',
+      companyLogo: job.company?.logo,
+      companyId: job.company?.id,
+      location: job.location,
+      salary: job.salaryMin ? `${job.salaryCurrency || 'USD'} ${job.salaryMin.toLocaleString()}${job.salaryMax ? `–${job.salaryMax.toLocaleString()}` : '+'}` : '',
+      employmentType: job.employmentType,
+      experience: job.experienceLevel,
+      workMode: job.workMode,
+      skills: job.skills || [],
+      createdAt: job.createdAt,
+      isEmployerJob: true,
+      detailsPath: source === 'hirenexa' ? `/jobs/${job.id}?source=hirenexa` : undefined,
+    })),
+    ...(source !== 'hirenexa' ? data?.data || [] : []).map(job => ({
+      ...mapArbeitnowJob(job),
+      detailsPath: source === 'live' ? `/jobs/${job.slug}?source=live` : undefined,
+    })),
+  ]
+  const allOpportunities = source === 'all' ? internshipData.map(mapInternship) : []
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -82,7 +129,7 @@ export default function BrowseJobs() {
     setCurrentPage(1)
   }
 
-  const filteredJobs = allJobs.filter(job => {
+  const filteredJobs = [...allJobs, ...allOpportunities].filter(job => {
     const searchText = `${job.title} ${job.companyName} ${job.location} ${(job.skills || []).join(' ')}`.toLowerCase()
     const searchTerm = query.trim().toLowerCase()
     if (searchTerm && !searchText.includes(searchTerm)) return false
@@ -114,7 +161,7 @@ export default function BrowseJobs() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-6">
-              Browse <span className="gradient-text">Jobs</span>
+              Browse <span className="gradient-text">{source === 'live' ? 'Live Jobs' : source === 'hirenexa' ? 'HireNexa Jobs' : 'Jobs'}</span>
             </h1>
 
             <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
@@ -241,7 +288,7 @@ export default function BrowseJobs() {
             <div className="flex-1">
               <div className="flex items-center justify-between mb-6">
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Showing <span className="font-medium text-slate-900 dark:text-white">{filteredJobs.length}</span> jobs
+                  Showing <span className="font-medium text-slate-900 dark:text-white">{filteredJobs.length}</span> {source === 'live' ? 'Arbeitnow jobs' : source === 'hirenexa' ? 'HireNexa jobs' : 'jobs and internships'}
                 </p>
               </div>
 
@@ -252,7 +299,7 @@ export default function BrowseJobs() {
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{error?.response?.data?.error || error?.message || 'Something went wrong'}</p>
                   <button onClick={() => window.location.reload()} className="btn-primary px-6 py-2 text-sm">Retry</button>
                 </div>
-              ) : isLoading ? (
+              ) : (source !== 'hirenexa' && isLoading) || (source === 'all' && internshipsLoading) || (source !== 'live' && employerJobsLoading) ? (
                 <div className="space-y-4">
                   {[1, 2, 3].map(i => <JobCardSkeleton key={i} />)}
                 </div>
@@ -265,7 +312,13 @@ export default function BrowseJobs() {
               ) : (
                 <div className="space-y-4">
                   {paginatedJobs.map((job, i) => (
-                    <JobCard key={job.id} job={job} index={i} />
+                    <JobCard
+                      key={job.id}
+                      job={job}
+                      isSaved={savedIds.has(job.id)}
+                      onSave={job.isEmployerJob ? (jobId) => toggleSave.mutate(jobId) : undefined}
+                      index={i}
+                    />
                   ))}
                 </div>
               )}

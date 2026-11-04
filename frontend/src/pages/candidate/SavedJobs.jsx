@@ -1,19 +1,19 @@
-import { useState } from 'react'
-import { motion } from 'framer-motion'
 import JobCard from '../../components/ui/JobCard'
-
-const savedJobs = [
-  { id: 1, title: 'Senior React Developer', companyName: 'TechCorp', companyLogo: null, companyId: 1, location: 'San Francisco, CA', salary: '$120k-$180k', employmentType: 'Full-time', experience: 'Senior', workMode: 'Hybrid', skills: ['React', 'TypeScript', 'GraphQL'], createdAt: new Date().toISOString() },
-  { id: 2, title: 'Full Stack Engineer', companyName: 'DataFlow', companyLogo: null, companyId: 2, location: 'Remote', salary: '$130k-$190k', employmentType: 'Full-time', experience: 'Senior', workMode: 'Remote', skills: ['Node.js', 'Python', 'AWS'], createdAt: new Date(Date.now() - 86400000).toISOString() },
-  { id: 3, title: 'Product Designer', companyName: 'DesignHub', companyLogo: null, companyId: 3, location: 'London, UK', salary: '$100k-$150k', employmentType: 'Full-time', experience: 'Mid-Level', workMode: 'On-site', skills: ['Figma', 'UI/UX', 'Design Systems'], createdAt: new Date(Date.now() - 2 * 86400000).toISOString() },
-]
+import { useSavedJobs, useToggleSaveJob } from '../../hooks/useSavedJobs'
 
 export default function SavedJobs() {
-  const [saved, setSaved] = useState(savedJobs.map(j => j.id))
+  const { data = [], isLoading, isError } = useSavedJobs()
+  const toggleSave = useToggleSaveJob()
+  const savedJobs = data.map(savedJob => ({
+    ...savedJob.job,
+    companyName: savedJob.job.company?.name,
+    companyLogo: savedJob.job.company?.logo,
+    companyId: savedJob.job.company?.id,
+    savedJobId: savedJob.id,
+  }))
 
-  const handleSave = (id) => {
-    setSaved(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id])
-  }
+  if (isLoading) return <p className="text-sm text-slate-500 dark:text-slate-400">Loading saved jobs...</p>
+  if (isError) return <p className="text-sm text-rose-600 dark:text-rose-400">Unable to load saved jobs.</p>
 
   return (
     <div>
@@ -22,7 +22,7 @@ export default function SavedJobs() {
 
       <div className="space-y-4">
         {savedJobs.map((job, i) => (
-          <JobCard key={job.id} job={job} isSaved={saved.includes(job.id)} onSave={handleSave} index={i} />
+          <JobCard key={job.id} job={job} isSaved onSave={(id) => toggleSave.mutate(id)} index={i} />
         ))}
         {savedJobs.length === 0 && (
           <div className="text-center py-20">

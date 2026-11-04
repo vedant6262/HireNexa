@@ -8,7 +8,7 @@ const CV_SERVICE_URL = /^https?:\/\//i.test(RAW_CV_SERVICE_URL)
   : `https://${RAW_CV_SERVICE_URL}`;
 const SERVICE_SCRIPT = path.resolve(__dirname, '../../cv_service/server.py');
 const CV_ROOT = path.resolve(__dirname, '../../../CV');
-const EXPECTED_VERSION = '7';
+const EXPECTED_VERSION = '8';
 
 let child = null;
 let starting = null;
@@ -79,6 +79,7 @@ function spawnService() {
   if (child && !child.killed) return child;
 
   const python = resolvePython();
+  const configuredPort = new URL(CV_SERVICE_URL).port || '5001';
   console.log(`[cv-service] Starting CV bridge with: ${python}`);
 
   child = spawn(python, [SERVICE_SCRIPT], {
@@ -86,6 +87,7 @@ function spawnService() {
     env: {
       ...process.env,
       CV_DIR: CV_ROOT,
+      CV_SERVICE_PORT: process.env.CV_SERVICE_PORT || configuredPort,
       PYTHONUNBUFFERED: '1',
       TF_CPP_MIN_LOG_LEVEL: process.env.TF_CPP_MIN_LOG_LEVEL || '2',
     },

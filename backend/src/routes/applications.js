@@ -33,11 +33,15 @@ router.get('/job/:jobId', requireAuth, requireRole('RECRUITER', 'ADMIN'), async 
     const applications = await prisma.application.findMany({
       where: { jobId: req.params.jobId },
       include: {
-        user: { select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true, resumeUrl: true, skills: true, experience: true, education: true } },
+        user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, headline: true, avatarUrl: true, resumeUrl: true, skills: true, experience: true, education: true } },
         interviews: true,
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    const job = await prisma.job.findUnique({ where: { id: req.params.jobId }, include: { company: true } });
+    const user = await prisma.user.findUnique({ where: { clerkId: req.userId } });
+    if (!job || (user.role !== 'ADMIN' && job.company.recruiterId !== user.id)) return res.status(403).json({ error: 'Not authorized to view these applicants' });
 
     res.json(applications);
   } catch (error) {
@@ -47,7 +51,7 @@ router.get('/job/:jobId', requireAuth, requireRole('RECRUITER', 'ADMIN'), async 
 
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const { jobId, coverLetter, resumeUrl } = req.body;
+    const { jobId, coverLetter, resumeUrl, firstName, lastName, phone } = req.body;
     const user = await prisma.user.findUnique({ where: { clerkId: req.userId } });
 
     const existing = await prisma.application.findUnique({
@@ -59,6 +63,10 @@ router.post('/', requireAuth, async (req, res) => {
     const job = await prisma.job.findUnique({ where: { id: jobId }, include: { company: true } });
     if (!job) return res.status(404).json({ error: 'Job not found' });
     if (job.status !== 'ACTIVE') return res.status(400).json({ error: 'This job is no longer accepting applications' });
+
+    if (firstName || lastName || phone) {
+      await prisma.user.update({ where: { id: user.id }, data: { firstName: firstName || user.firstName, lastName: lastName || user.lastName, phone: phone || user.phone, isOnboarded: true } });
+    }
 
     const application = await prisma.application.create({
       data: { coverLetter, resumeUrl, userId: user.id, jobId },
@@ -86,12 +94,17 @@ router.post('/', requireAuth, async (req, res) => {
 router.patch('/:id/status', requireAuth, requireRole('RECRUITER', 'ADMIN'), async (req, res) => {
   try {
     const { status } = req.body;
+    const allowedStatuses = ['PENDING', 'REVIEWING', 'SHORTLISTED', 'INTERVIEW', 'OFFERED', 'HIRED', 'REJECTED'];
+    if (!allowedStatuses.includes(status)) return res.status(400).json({ error: 'Invalid application status' });
     const application = await prisma.application.findUnique({
       where: { id: req.params.id },
       include: { user: true, job: { include: { company: true } } },
     });
 
     if (!application) return res.status(404).json({ error: 'Application not found' });
+
+    const recruiter = await prisma.user.findUnique({ where: { clerkId: req.userId } });
+    if (recruiter.role !== 'ADMIN' && application.job.company.recruiterId !== recruiter.id) return res.status(403).json({ error: 'Not authorized to update this application' });
 
     const updated = await prisma.application.update({
       where: { id: req.params.id },
@@ -105,8 +118,9 @@ router.patch('/:id/status', requireAuth, requireRole('RECRUITER', 'ADMIN'), asyn
       message: `Your application for ${application.job.title} at ${application.job.company.name} has been ${status.toLowerCase()}.`,
     });
 
+    const notificationType = { INTERVIEW: 'INTERVIEW_SCHEDULED', OFFERED: 'OFFER_LETTER' }[status] || status;
     await prisma.notification.create({
-      data: { type: status, title: `Application ${status.charAt(0) + status.slice(1).toLowerCase()}`, message: `Your application has been ${status.toLowerCase()}.`, userId: application.userId },
+      data: { type: notificationType, title: `Application ${status.charAt(0) + status.slice(1).toLowerCase()}`, message: `Your application has been ${status.toLowerCase()}.`, userId: application.userId },
     });
 
     const notificationTypes = { SHORTLISTED: 'Shortlisted', REJECTED: 'Rejected', OFFERED: 'Offer Letter' };

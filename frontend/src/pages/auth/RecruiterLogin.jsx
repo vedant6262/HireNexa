@@ -1,6 +1,5 @@
 import { Navigate, Link, useLocation } from 'react-router-dom'
-import { SignIn } from '@clerk/clerk-react'
-import { useAuth } from '../../context/AuthProvider'
+import { SignIn, useAuth } from '../../context/AuthProvider'
 import { HiOutlineBriefcase } from 'react-icons/hi2'
 
 export default function RecruiterLogin() {
@@ -26,7 +25,7 @@ export default function RecruiterLogin() {
         </div>
 
         <div className="glass-card p-6">
-          <SignIn routing="path" path="/recruiter/login" fallbackRedirectUrl="/recruiter" />
+          <SignIn routing="path" path="/recruiter/login" fallbackRedirectUrl="/recruiter" forceRedirectUrl="/recruiter" />
         </div>
 
         <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">

@@ -26,7 +26,7 @@ DEFAULT_CV_ROOT = Path(__file__).resolve().parents[2] / "CV"
 CV_ROOT = Path(os.environ.get("CV_DIR", DEFAULT_CV_ROOT)).resolve()
 HOST = os.environ.get("CV_SERVICE_HOST", "127.0.0.1")
 PORT = int(os.environ.get("CV_SERVICE_PORT", os.environ.get("PORT", "5001")))
-SERVICE_VERSION = "7"
+SERVICE_VERSION = "8"
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 PERSON_REFRESH_SECONDS = 2.0
 
@@ -330,7 +330,8 @@ class SessionMonitor:
                 if contribution:
                     events.append(self._event("face_absent", contribution))
 
-            multiple_people = len(person_boxes) > 1
+            person_count = max(len(person_boxes), len(faces))
+            multiple_people = person_count > 1
             if multiple_people:
                 contribution = self.engine.add("multiple_people", now=now)
                 if contribution:
@@ -342,7 +343,7 @@ class SessionMonitor:
                 "frameCount": self.frame_count,
                 "analyzedAt": utc_now(),
                 "faceCount": len(faces),
-                "personCount": len(person_boxes),
+                "personCount": person_count,
                 "faces": face_payload,
                 "phone": phone_payload,
                 "multiplePeople": multiple_people,

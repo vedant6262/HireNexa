@@ -23,6 +23,7 @@ export function useApplyJob() {
     mutationFn: (data) => api.post('/applications', data).then(res => res.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['applications'] })
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
       toast.success('Application submitted successfully')
     },
     onError: (error) => toast.error(error.message),

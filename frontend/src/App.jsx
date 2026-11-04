@@ -1,9 +1,10 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import MainLayout from './layouts/MainLayout'
 import DashboardLayout from './layouts/DashboardLayout'
 import LoadingScreen from './components/common/LoadingScreen'
 import ProtectedRoute from './components/common/ProtectedRoute'
+import RecruiterAccess from './components/common/RecruiterAccess'
 
 const Home = lazy(() => import('./pages/Home'))
 const About = lazy(() => import('./pages/About'))
@@ -24,7 +25,6 @@ const RecruiterLogin = lazy(() => import('./pages/auth/RecruiterLogin'))
 const RecruiterSignup = lazy(() => import('./pages/auth/RecruiterSignup'))
 
 const SkillAssessment = lazy(() => import('./pages/SkillAssessment'))
-const PortalHub = lazy(() => import('./pages/PortalHub'))
 const AcademiaHub = lazy(() => import('./pages/AcademiaHub'))
 
 const CandidateDashboard = lazy(() => import('./pages/candidate/Dashboard'))
@@ -73,13 +73,14 @@ export default function App() {
 
         <Route element={<ProtectedRoute><DashboardLayout role="candidate" /></ProtectedRoute>}>
           <Route path="/skill-assessment" element={<SkillAssessment />} />
-          <Route path="/internships" element={<PortalHub />} />
           <Route path="/academia" element={<AcademiaHub />} />
         </Route>
 
         <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout role="candidate" /></ProtectedRoute>}>
           <Route index element={<CandidateDashboard />} />
-          <Route path="jobs" element={<BrowseJobs />} />
+          <Route path="jobs" element={<Navigate to="/dashboard/hirenexa-jobs" replace />} />
+          <Route path="live-jobs" element={<BrowseJobs source="live" />} />
+          <Route path="hirenexa-jobs" element={<BrowseJobs source="hirenexa" />} />
           <Route path="applications" element={<MyApplications />} />
           <Route path="saved-jobs" element={<SavedJobs />} />
           <Route path="profile" element={<Profile />} />
@@ -91,7 +92,7 @@ export default function App() {
           <Route index element={<AptitudePrep />} />
         </Route>
 
-        <Route path="/recruiter" element={<ProtectedRoute redirectTo="/recruiter/login"><DashboardLayout role="recruiter" /></ProtectedRoute>}>
+        <Route path="/recruiter" element={<RecruiterAccess><ProtectedRoute redirectTo="/recruiter/login"><DashboardLayout role="recruiter" /></ProtectedRoute></RecruiterAccess>}>
           <Route index element={<RecruiterDashboard />} />
           <Route path="post-job" element={<PostJob />} />
           <Route path="manage-jobs" element={<ManageJobs />} />
